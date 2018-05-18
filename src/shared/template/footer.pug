@@ -1,0 +1,9 @@
+script(src=cdnUrl + "javascript/fontloader.min.js", async=true)
+script.
+  (function LoadWorker() {
+  if ( !navigator.serviceWorker ) return;
+  navigator.serviceWorker.register( "/vendors/worker.js" , { scope: '/vendors/' } );
+  })();
+!= scripts
+
+<!--!{timings}-->

@@ -1,0 +1,30 @@
+{
+  "presets": [
+    ["env", {
+        "targets": {
+          "uglify": true,
+          "node": "current",
+          "browsers": ["> 3%", "ie 11"]
+        },
+        "debug": false,
+    }],
+    "react",
+    "stage-0"
+  ],
+  "plugins": [
+    "transform-decorators-legacy",
+    "syntax-dynamic-import",
+    "react-css-modules",
+  ],
+  "env": {
+    "production": {
+      "plugins": ["transform-react-remove-prop-types"]
+    },
+    "test": {
+      "plugins": [
+        "transform-decorators-legacy",
+        "transform-es2015-modules-commonjs"
+      ]
+    }
+  }
+}
