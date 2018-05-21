@@ -2,10 +2,10 @@ import React from 'react';
 import { Component } from 'react';
 import ReactDOM from 'react-dom';
 import 'react-router';
-// import { AppContainer } from 'react-hot-loader';
+import { AppContainer } from 'react-hot-loader';
 import { Provider } from 'react-redux';
-// import { Route } from 'react-router-dom';
-// import { ConnectedRouter } from 'react-router-redux';
+import { Route } from 'react-router-dom';
+import { ConnectedRouter } from 'react-router-redux';
 import createHistory from 'history/createBrowserHistory';
 
 import stylesReset from 'reset.css';
@@ -16,38 +16,48 @@ import ContextProvider from 'Components/ContextProvider/index';
 
 import stylesMain from 'Styles/main.pcss';
 
-const history = createHistory();
-const store = configureStore({ ...window.__REDUX_STATE__ }, history);
+(async () => {
+  const method = process.env.NODE_ENV === 'local' ? 'render' : 'hydrate';
 
-const method = process.env.NODE_ENV === 'local' ? 'render' : 'hydrate';
+  let data = {};
 
-ReactDOM[method](
-  <AppContainer>
-    <ContextProvider>
-      <Root
-        store={store}
-        history={history}
-        i18n={i18n}
-      />
-    </ContextProvider>
-  </AppContainer>,
-  document.getElementById('root'),
-);
+  try {
+    const response = await fetch(`/store/${Math.floor(Date.now() / 3000000)}.json`);
+    data = await response.json();
+  } catch (error) {} // eslint-disable-line
 
-// Hot Module Replacement API
-// if (module.hot) {
-//   module.hot.accept('../shared/Root', () => {
-//     ReactDOM.render(
-//       <AppContainer>
-//         <ContextProvider>
-//           <Root
-//             store={store}
-//             history={history}
-//             i18n={i18n}
-//           />
-//         </ContextProvider>
-//       </AppContainer>,
-//       document.getElementById('root'),
-//     );
-//   });
-// }
+  const history = createHistory();
+  const store = configureStore( data, history );
+
+  ReactDOM[method](
+    <AppContainer>
+      <ContextProvider>
+        <Root
+          store={store}
+          history={history}
+          i18n={i18n}
+        />
+      </ContextProvider>
+    </AppContainer>,
+    document.getElementById('root'),
+  );
+
+  // Hot Module Replacement API
+  if (module.hot) {
+    module.hot.accept('../shared/Root', () => {
+      ReactDOM.render(
+        <AppContainer>
+          <ContextProvider>
+            <Root
+              store={store}
+              history={history}
+              i18n={i18n}
+            />
+          </ContextProvider>
+        </AppContainer>,
+        document.getElementById('root'),
+      );
+    });
+  }
+
+})();

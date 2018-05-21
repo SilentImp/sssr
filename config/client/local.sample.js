@@ -29,6 +29,7 @@ module.exports = {
     openPage: '',
   },
   output: {
+    libraryTarget: 'umd',
     path: path.resolve(projectPath, 'build'),
     publicPath: '/',
     chunkFilename: '[name].chunk.js',

@@ -12,6 +12,7 @@ module.exports = {
     ],
   },
   output: {
+    libraryTarget: 'umd',
     path: path.resolve(projectPath, 'build'),
     publicPath: '/',
     chunkFilename: '[name]-[hash].chunk.js',

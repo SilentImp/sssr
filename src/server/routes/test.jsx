@@ -3,6 +3,7 @@ import TMMemcached from 'Utils/TMMemcached';
 import { AppContainer } from 'react-hot-loader';
 import { createMemoryHistory as createHistory } from 'history';
 import { renderToString } from 'react-dom/server';
+import fs from 'fs';
 
 import template from 'Shared/template/index.pug';
 
@@ -12,6 +13,9 @@ import i18n from 'Shared/i18n';
 import Root from 'Shared/Root';
 import ContextProvider from 'Shared/components/ContextProvider/index';
 import stats from '../../../stats.json';
+
+const path = require('path');
+const name = `./build/store/${Math.floor(Date.now() / 3000000)}.json`;
 
 const {
   assetsByChunkName: {
@@ -43,10 +47,10 @@ const getData = async ({
     const gettingDataEnd =
       parseInt(((endGettingData[0] * 1e3) + ((endGettingData[1]) * 1e-6)), 10);
     if (isChrome && !isCanary) {
-      timings.push(`CacheRead=${gettingDataEnd - gettingDataStart}; "Reading cache"`);
+      timings.push(`DataLoad=${gettingDataEnd - gettingDataStart}; "Loading data"`);
     }
     if (isCanary || !isChrome) {
-      timings.push(`cacheread;desc="Reading cache";dur=${gettingDataEnd - gettingDataStart}`);
+      timings.push(`dataload;desc="Reading cache";dur=${gettingDataEnd - gettingDataStart}`);
     }
     await memcached.set('test', store.getState(), TM_CACHE_CONFIG.ttl);
     await memcached.set('test-backup', store.getState(), parseInt(TM_CACHE_CONFIG.ttl, 10) + 30000);
@@ -128,8 +132,8 @@ export const TestRoute = async (
         ...store,
         router: history,
       }, history);
-      setTimeout(() => {
-        getData({
+      setTimeout(async () => {
+        await getData({
           store,
           memcached,
           TM_CACHE_CONFIG,
@@ -137,6 +141,13 @@ export const TestRoute = async (
           isChrome,
           isCanary,
         });
+        console.log('save to: ', path.resolve(name));
+        fs.writeFile(
+          path.resolve(name),
+          JSON.stringify(store.getState()).replace(/\u2028/g, '\\u2028').
+            replace(/\u2029/g, '\\u2029'),
+          ()=>{}
+        );
       }, 0);
       let readFromCacheBackupEnd = process.hrtime();
 
@@ -159,6 +170,15 @@ export const TestRoute = async (
         isChrome,
         isCanary,
       });
+
+      console.log('save to: ', path.resolve(name));
+
+      fs.writeFile(
+        path.resolve(name),
+        JSON.stringify(store.getState()).replace(/\u2028/g, '\\u2028').
+          replace(/\u2029/g, '\\u2029'),
+        ()=>{}
+      );
     }
   }
 

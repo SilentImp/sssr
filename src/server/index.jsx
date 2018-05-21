@@ -82,10 +82,12 @@ app.use((req, res, next) => {
       res.append('Link', `<${uri}>; as="${translate[extension]}"; rel="preload"`);
     });
   });
-  res.append('Link', '<https://unpkg.com/react@16/umd/react.development.js>; rel="preload"; as="script"')
-  res.append('Link', '</worker.js>; as="worker"; rel="preload"');
+  res.append('Link', `</store/${Math.floor(Date.now() / 3000000)}.json>; rel="preload"; as="fetch"`);
+  res.append('Link', '<https://unpkg.com/react@16/umd/react.development.js>; rel="preload"; as="script"');
+  res.append('Link', '<https://unpkg.com/react-dom@16/umd/react-dom.development.js>; rel="preload"; as="script"');
+  // res.append('Link', '</worker.js>; rel="preload"; as="worker"');
   res.append('Link', '</javascript/fontfaceobserver.standalone.js>; as="script"; rel="preload"');
-  res.append('Link', '</javascript/fontloader.min.js>; as=script; rel=preload');
+  res.append('Link', '</javascript/fontloader.min.js>; as="script"; rel="preload"');
   next();
 });
 
