@@ -4,15 +4,24 @@ import Cache from 'i18next-localstorage-cache';
 import LanguageDetector from 'i18next-browser-languagedetector';
 import sprintf from 'i18next-sprintf-postprocessor';
 
+
 i18next
   .use(XHR)
   .use(Cache)
-  .use(LanguageDetector)
   .use(sprintf)
+  .use(LanguageDetector)
   .init({
+    fallbackLng: 'en',
     overloadTranslationOptionHandler: sprintf.overloadTranslationOptionHandler,
     detection: {
       lookupQuerystring: 'lang',
+      order: ['path', 'querystring', 'htmlTag'],
+    },
+    react: {
+      wait: false,
+      bindI18n: 'languageChanged loaded',
+      bindStore: 'added removed',
+      nsMode: 'default',
     },
     ns: ['translation'],
     load: 'languageOnly',
@@ -25,6 +34,7 @@ i18next
     resources: {
       en: {
         translation: {
+          'Test title': 'Test title',
           'Do not reply': 'Do not reply',
           Reply: 'Reply',
           'Cart with <b>{{count}}</b> for <b>{{price}}</b>::wide': 'Cart with <b>{{count}}</b> for <b>{{price}}</b>',
@@ -44,6 +54,7 @@ i18next
       },
       ru: {
         translation: {
+          'Test title': 'Тiстечка на чвахи',
           'Do not reply': 'Не отвечать',
           Reply: 'Ответить',
           'Cart with <b>{{count}}</b> for <b>{{price}}</b>::wide': 'В корзине <b>{{count}}</b> за <b>{{price}}</b>',

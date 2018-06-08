@@ -1,27 +1,48 @@
-import React from 'react';
-import Config from 'Config';
-import PropTypes from 'prop-types';
-// import { translate } from 'react-i18next';
-// import { withRouter } from 'react-router-dom';
-// import Cookies from 'Utils/cookies';
+import React, { Component } from 'react';
+import { Switch, Route, Link } from 'react-router-dom';
+import Test from 'Components/Test';
+import License from 'Components/License';
 
 import styles from './App.pcss';
 
-console.log(styles);
+export class App extends Component { // elsint-disable-line
+  state = {
+    some: 'state',
+  }
 
-export const App = () => (<p className={styles.App}>
-   just wtf?!
-</p>);
-
-// export class App extends Component {
-//   render() {
-//     console.log('rendering!');
-//     return (
-//       <p className={styles.App}>
-//          just wtf?!
-//       </p>
-//     );
-//   }
-// }
+  render() {
+    return (
+      <section className={styles.App} dataArg={this.state.some}>
+        <h1 className={styles.App__title}>Pages</h1>
+        <nav className={styles.App__menu}>
+          <Link className={styles.App__link} to="/">home</Link>
+          <Link className={styles.App__link} to="/license">licenses</Link>
+        </nav>
+        <Switch>
+          <Route
+            exact
+            path={'/:locale([a-z]{1,2})/license'}
+            component={License}
+          />
+          <Route
+            exact
+            path="/license"
+            component={License}
+          />
+          <Route
+            exact
+            path={'/:locale([a-z]{1,2})'}
+            component={Test}
+          />
+          <Route
+            exact
+            path="/"
+            component={Test}
+          />
+        </Switch>
+      </section>
+    );
+  }
+}
 
 export default App;

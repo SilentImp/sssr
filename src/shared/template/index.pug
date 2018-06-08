@@ -26,7 +26,10 @@ html(lang='en', class=font ? 'font' : '')
     link(rel='manifest', href='manifest.json')
     link(rel='mask-icon', href='safari-pinned-tab.svg', color='#5bbad5')
     link(rel='shortcut icon', href='favicon.ico')
-    != styles
+    if styles
+      !=styles
+    if criticalCSS
+      style!= criticalCSS
     script.
       (function (i, s, o, g, r, a, m) {
           i['GoogleAnalyticsObject'] = r; i[r] = i[r] || function () {

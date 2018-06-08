@@ -3,34 +3,28 @@ const path = require('path');
 
 const projectPath = path.resolve(__dirname, '../../');
 
-module.exports = {
+const config = {
   mode: 'development',
   entry: {
     server: [
-      'babel-polyfill',
-      path.join(projectPath, 'src/server/index.jsx'),
+      '@babel/polyfill',
+      path.resolve(projectPath, 'src/server'),
     ],
   },
   output: {
     libraryTarget: 'umd',
     path: path.resolve(projectPath, 'build'),
     publicPath: '/',
-    chunkFilename: '[name]-[hash].chunk.js',
+    chunkFilename: '[name].chunk.js',
     filename: '[name].js',
   },
   plugins: [
     new webpack.DefinePlugin({
-      'process.env.NODE_ENV': JSON.stringify('dev'),
+      'process.env.NODE_ENV': JSON.stringify('local'),
+      'process.env.NODE_DEV_SERVER': process.env.NODE_DEV_SERVER,
     }),
   ],
-  module: {
-    // rules: [
-    //   {
-    //     enforce: 'pre',
-    //     test: /\.jsx?$/,
-    //     use: 'eslint-loader',
-    //     exclude: /node_modules/,
-    //   },
-    // ],
-  },
 };
+
+
+module.exports = config;

@@ -7,7 +7,10 @@ const projectPath = path.resolve(__dirname, '../../');
 module.exports = {
   mode: 'production',
   entry: {
-    client: ['babel-polyfill', './src/client'],
+    client: [
+      '@babel/polyfill',
+      path.resolve(projectPath, 'src/client'),
+    ],
   },
   output: {
     libraryTarget: 'umd',
@@ -22,39 +25,7 @@ module.exports = {
     }),
     new webpack.DefinePlugin({
       'process.env.NODE_ENV': JSON.stringify('production'),
+      'process.env.NODE_DEV_SERVER': process.env.NODE_DEV_SERVER,
     }),
   ],
-  module: {
-    rules: [
-      {
-        test: /\.pcss$/,
-        use: [
-          'style-loader',
-          {
-            loader: 'css-loader',
-            options: {
-              modules: true,
-              importLoaders: 1,
-              localIdentName: '[local]~~~~[hash:base64:24]',
-            },
-          },
-          'postcss-loader',
-        ],
-      },
-      {
-        test: /\.css$/,
-        use: [
-          'style-loader',
-          {
-            loader: 'css-loader',
-            options: {
-              modules: true,
-              importLoaders: 1,
-              localIdentName: '[local]~~~~[hash:base64:24]',
-            },
-          },
-        ],
-      },
-    ],
-  },
 };

@@ -1,13 +1,16 @@
 const webpack = require('webpack');
 const path = require('path');
+const UglifyJSPlugin = require('uglifyjs-webpack-plugin');
 
 const projectPath = path.resolve(__dirname, '../../');
-const UglifyJSPlugin = require('uglifyjs-webpack-plugin');
 
 module.exports = {
   mode: 'production',
   entry: {
-    server: ['babel-polyfill', './src/server'],
+    server: [
+      '@babel/polyfill',
+      path.resolve(projectPath, 'src/server'),
+    ],
   },
   output: {
     libraryTarget: 'umd',
@@ -22,6 +25,7 @@ module.exports = {
     }),
     new webpack.DefinePlugin({
       'process.env.NODE_ENV': JSON.stringify('production'),
+      'process.env.NODE_DEV_SERVER': process.env.NODE_DEV_SERVER,
     }),
   ],
 };

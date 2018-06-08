@@ -1,16 +1,25 @@
 import React from 'react';
-import { Component } from 'react';
 import PropTypes from 'prop-types';
 import { Provider } from 'react-redux';
+import { ConnectedRouter } from 'react-router-redux';
 import App from 'Components/App';
+import LocaleProvider from 'Components/LocaleContext';
 
-const Root = ({ store }) => (
+import 'Styles/main.pcss';
+import 'Styles/reset.css';
+
+const Root = ({ store, history }) => (
   <Provider store={store}>
-    <App />
+    <ConnectedRouter history={history}>
+      <LocaleProvider>
+        <App />
+      </LocaleProvider>
+    </ConnectedRouter>
   </Provider>
 );
 
 Root.propTypes = {
+  history: PropTypes.shape({}).isRequired,
   store: PropTypes.shape({}).isRequired,
 };
 

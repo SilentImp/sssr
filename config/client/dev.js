@@ -8,7 +8,7 @@ module.exports = {
   mode: 'development',
   entry: {
     client: [
-      'babel-polyfill',
+      '@babel/polyfill',
       path.join(projectPath, 'src/client/index.jsx'),
     ],
   },
@@ -28,42 +28,6 @@ module.exports = {
     }),
   ],
   module: {
-    rules: [
-      // {
-      //   enforce: 'pre',
-      //   test: /\.jsx?$/,
-      //   use: 'eslint-loader',
-      //   exclude: /node_modules/,
-      // },
-      // {
-      //   test: /\.pcss$/,
-      //   use: [
-      //     'style-loader',
-      //     {
-      //       loader: 'css-loader',
-      //       options: {
-      //         modules: true,
-      //         importLoaders: 1,
-      //         localIdentName: '[local]~~~~[hash:base64:24]',
-      //       },
-      //     },
-      //     'postcss-loader',
-      //   ],
-      // },
-      // {
-      //   test: /\.css$/,
-      //   use: [
-      //     'style-loader',
-      //     {
-      //       loader: 'css-loader',
-      //       options: {
-      //         modules: true,
-      //         importLoaders: 1,
-      //         localIdentName: '[local]~~~~[hash:base64:24]',
-      //       },
-      //     },
-      //   ],
-      // },
-    ],
+    rules: [],
   },
 };

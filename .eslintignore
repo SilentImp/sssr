@@ -2,3 +2,5 @@ public
 build
 *.ejs
 static
+config
+*webpack.*

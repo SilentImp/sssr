@@ -7,15 +7,17 @@ import fs from 'fs';
 
 import template from 'Shared/template/index.pug';
 
-// import getContext from 'Utils/stylesSSR';
 import configureStore from 'Shared/store';
 import i18n from 'Shared/i18n';
 import Root from 'Shared/Root';
-import ContextProvider from 'Shared/components/ContextProvider/index';
 import stats from '../../../stats.json';
 
+const penthouse = require('penthouse');
 const path = require('path');
+
 const name = `./build/store/${Math.floor(Date.now() / 3000000)}.json`;
+
+const ROUTE_NAME = 'test';
 
 const {
   assetsByChunkName: {
@@ -52,10 +54,39 @@ const getData = async ({
     if (isCanary || !isChrome) {
       timings.push(`dataload;desc="Reading cache";dur=${gettingDataEnd - gettingDataStart}`);
     }
-    await memcached.set('test', store.getState(), TM_CACHE_CONFIG.ttl);
-    await memcached.set('test-backup', store.getState(), parseInt(TM_CACHE_CONFIG.ttl, 10) + 30000);
+    await memcached.set(ROUTE_NAME, store.getState(), TM_CACHE_CONFIG.ttl);
+    await memcached.set(`${ROUTE_NAME}-backup`, store.getState(), parseInt(TM_CACHE_CONFIG.ttl, 10) + 30000);
   });
 };
+
+const generateCriticalCSS = async ({
+  uri,
+  memcached,
+  TM_CACHE_CONFIG,
+}) => new Promise(async (resolve, reject) => {
+  try {
+    fs.readFile('./build/server.css', 'utf8', async (err, cssString) => {
+      console.log('getting critical');
+
+      const css = await penthouse({
+        url: `${uri}?criticalCSS=true`,
+        cssString,
+        height: 500,
+        propertiesToRemove: ['(.*)transition(.*)', 'cursor', 'pointer-events', '(-webkit-)?tap-highlight-color', '(.*)user-select'],
+      });
+
+      console.warn('adding to cache: ', `critical-${ROUTE_NAME}`);
+
+      await memcached.set(`critical-${ROUTE_NAME}`, css, TM_CACHE_CONFIG.ttl * 100);
+      await memcached.set(`critical-${ROUTE_NAME}-backup`, css, parseInt(TM_CACHE_CONFIG.ttl, 10) + 30000);
+
+      resolve(css);
+    });
+  } catch (error) {
+    console.warn('generation error: ', error);
+    reject(error.message);
+  }
+});
 
 export const TestRoute = async (
   cdnUrl,
@@ -68,7 +99,7 @@ export const TestRoute = async (
   let memcached = null;
 
   if (TM_CACHE_MEMCACHE) {
-    (async () => {
+    await (async () => {
       memcached = new TMMemcached();
       try {
         await memcached.init();
@@ -76,7 +107,6 @@ export const TestRoute = async (
     })();
   }
 
-  console.log('test route');
   const userAgent = req.header('User-Agent');
   const isChrome = (userAgent.indexOf(' Chrome/') > -1);
   const chromeData = / Chrome\/([\d]+)./ig.exec(userAgent);
@@ -103,13 +133,51 @@ export const TestRoute = async (
     hash: currentURL.hash === null ? '' : currentURL.hash,
   };
 
-  let store = null;
+  let criticalCSS = '';
 
+  if (!req.query.criticalCSS) {
+    let criticalCSSStart = process.hrtime();
+    try {
+      console.warn('critical css loaded from main cache: ', `critical-${ROUTE_NAME}`);
+      criticalCSS = await memcached.get(`critical-${ROUTE_NAME}`);
+      console.warn('critical css loaded from main cache success');
+    } catch (error) {
+      try {
+        console.warn('critical css loaded from backup cache: ', `critical-${ROUTE_NAME}-backup`);
+        criticalCSS = await memcached.get(`critical-${ROUTE_NAME}-backup`);
+        generateCriticalCSS({
+          uri: `${req.protocol}://${req.get('host')}${req.originalUrl}`,
+          memcached,
+          TM_CACHE_CONFIG,
+        });
+        console.warn('critical css loaded from backup success');
+      } catch (err) {
+        try {
+          console.warn('critical css generated');
+          criticalCSS = await generateCriticalCSS({
+            uri: `${req.protocol}://${req.get('host')}${req.originalUrl}`,
+            memcached,
+            TM_CACHE_CONFIG,
+          });
+          console.warn('critical css generated success');
+        } catch (e) {} // eslint-disable-line
+      }
+    }
+    let criticalCSSEnd = process.hrtime();
+    criticalCSSStart =
+      parseInt(((criticalCSSStart[0] * 1e3) + ((criticalCSSStart[1]) * 1e-6)), 10);
+    criticalCSSEnd =
+      parseInt(((criticalCSSEnd[0] * 1e3) + ((criticalCSSEnd[1]) * 1e-6)), 10);
+    if (isChrome && !isCanary) timings.push(`CriticalCSS=${criticalCSSEnd - criticalCSSStart}; "Critical CSS"`);
+    if (isCanary || !isChrome) timings.push(`criticalcss;desc="Critical CSS";dur=${criticalCSSEnd - criticalCSSStart}`);
+  }
+
+  let store = null;
   try {
     let readFromCacheStart = process.hrtime();
-    console.log('getting test from cache');
-    store = await memcached.get('test');
-    console.log('getting test from cache success');
+    console.log(`getting ${ROUTE_NAME} from cache`);
+    store = await memcached.get(ROUTE_NAME);
+    console.log(`getting ${ROUTE_NAME} from cache success`);
     store = configureStore({
       ...store,
       router: history,
@@ -125,9 +193,9 @@ export const TestRoute = async (
   } catch (error) {
     try {
       let readFromCacheBackupStart = process.hrtime();
-      console.log('getting test-backup from cache');
-      store = await memcached.get('test-backup');
-      console.log('getting test-backup from cache success');
+      console.log(`getting ${ROUTE_NAME}-backup from cache`);
+      store = await memcached.get(`${ROUTE_NAME}-backup`);
+      console.log(`getting ${ROUTE_NAME}-backup from cache success`);
       store = configureStore({
         ...store,
         router: history,
@@ -141,12 +209,11 @@ export const TestRoute = async (
           isChrome,
           isCanary,
         });
-        console.log('save to: ', path.resolve(name));
         fs.writeFile(
           path.resolve(name),
-          JSON.stringify(store.getState()).replace(/\u2028/g, '\\u2028').
-            replace(/\u2029/g, '\\u2029'),
-          ()=>{}
+          JSON.stringify(store.getState()).replace(/\u2028/g, '\\u2028')
+            .replace(/\u2029/g, '\\u2029'),
+          () => {},
         );
       }, 0);
       let readFromCacheBackupEnd = process.hrtime();
@@ -171,51 +238,37 @@ export const TestRoute = async (
         isCanary,
       });
 
-      console.log('save to: ', path.resolve(name));
-
       fs.writeFile(
         path.resolve(name),
-        JSON.stringify(store.getState()).replace(/\u2028/g, '\\u2028').
-          replace(/\u2029/g, '\\u2029'),
-        ()=>{}
+        JSON.stringify(store.getState()).replace(/\u2028/g, '\\u2028')
+          .replace(/\u2029/g, '\\u2029'),
+        () => {},
       );
     }
   }
 
-  // res.write(templateState({
-  //   state: JSON.stringify(store.getState()).replace(/\u2028/g, '\\u2028').
-  //   replace(/\u2029/g, '\\u2029'),
-  // }));
-
   let renderStart = process.hrtime();
   const application = renderToString((
     <AppContainer>
-      <ContextProvider>
-        <Root
-          store={store}
-          history={history}
-          location={req.url}
-          i18n={i18n}
-        />
-      </ContextProvider>
+      <Root
+        store={store}
+        history={history}
+        location={req.url}
+      />
     </AppContainer>
   ));
 
   let renderEnd = process.hrtime();
 
-  const scripts = assets.filter(uri => {
+  const scripts = assets.filter((uri) => {
     const extension = uri.split('.').slice(-1)[0];
     return (extension === 'js');
-  }).map(uri => {
-    return `<script async src="${cdnUrl}${uri}"></script>`.replace(/(.+)\/\//ig, '$1/');
-  }).join('');
+  }).map(uri => `<script async src="${cdnUrl}${uri}"></script>`.replace(/(.+)\/\//ig, '$1/')).join('');
 
-  const styles = assets.filter(uri => {
+  const styles = assets.filter((uri) => {
     const extension = uri.split('.').slice(-1)[0];
     return (extension === 'css');
-  }).map(uri => {
-    return `<link rel="preload" href="${cdnUrl}${uri}" as="style" onload="this.rel = 'stylesheet'" />`.replace(/(.+)\/\//ig, '$1/');
-  }).join('');
+  }).map(uri => `<link rel="preload" href="${cdnUrl}${uri}" as="style" onload="this.rel = 'stylesheet'" /><noscript><link rel="stylesheet" href="${cdnUrl}${uri}" /></noscript>`.replace(/(.+)\/\//ig, '$1/')).join(''); // eslint-disable-line
 
 
   renderEnd = parseInt(((renderEnd[0] * 1e3) + ((renderEnd[1]) * 1e-6)), 10);
@@ -232,11 +285,6 @@ export const TestRoute = async (
   console.log('Server-Timing', timings); // eslint-disable-line
 
   res.set('Server-Timing', timings);
-  // @todo find out why we got error "Error [ERR_HTTP_TRAILER_INVALID]:
-  // Trailers are invalid with this transfer encoding" on dev server
-  // res.addTrailers({ 'Server-Timing': timings });
-
-
   res.end(template({
     font: (req.cookies.font !== undefined),
     title: 'Template Monster',
@@ -244,6 +292,7 @@ export const TestRoute = async (
     application,
     scripts,
     styles,
+    criticalCSS,
   }));
 };
 
